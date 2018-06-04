@@ -1,0 +1,41 @@
+#R version 3.5.0
+#Wine Quality analysis
+
+setwd("xxxxxxx/xxxxxxxxxxxxxxx")
+
+# reading the data into R from saved RDS file
+wine.data <- readRDS("wine_data_raw.RDS")
+
+## subsetting white wine data
+library(dplyr)
+white <- ungroup(wine.data) %>% filter(style=="white") %>% select(-style)
+str(white)
+
+### corrleation plot
+library(corrplot)
+corrplot(cor(white), method="number", type="upper")
+
+### removing density and free sulfur dioxide
+names(white)
+white_new <- white[,-c(6,8)]
+names(white_new)
+
+library(caret)
+library(ROCR)
+
+set.seed(4321)
+white$quality <- as.factor(white_new$quality)
+# split into test and train 70:30
+white_dt <- createDataPartition(y=white_new$quality, p=.70, list=F)
+#Train data
+white_dt_train <- white_new[white_dt,]
+#test Data
+white_dt_test <- white_new[-white_dt,]
+
+# Decision Tree = C5.0
+ctrl <- trainControl(method="cv", number=10)
+
+system.time(c50fit <- train(quality ~ ., data = white_dt_train, method="C5.0", 
+                    maxdepth = 2, tuneLength=3, trControl=ctrl, allowParallel=T))
+
+summary(c50fit)
